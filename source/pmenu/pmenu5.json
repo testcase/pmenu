@@ -1,6 +1,13 @@
 {
 	"name" : "foobar",
-	"contents" : [ "Above The Cathedral.wav", ["ding", "dang"], {"name": "blop", "contents": ["bleem", "jbl"]}, "Alchemist.wav", "An Army Approacheth.wav" ]
+	"contents" : [ "Above The Cathedral.wav", 
+					"Alchemist.wav", 
+					
+					{ "name" : "rrkla",
+						"contents" : ["Broken Thermometer.wav", "Cacophonous When Running.wav", "Cast Iron Toolkit.wav"]
+						},
+					
+					"An Army Approacheth.wav" ]
 }
 		
 

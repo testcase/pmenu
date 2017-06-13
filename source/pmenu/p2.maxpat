@@ -55,7 +55,7 @@
 					"maxclass" : "newobj",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 235.0, 396.0, 34.0, 22.0 ],
+					"patching_rect" : [ 221.0, 396.0, 34.0, 22.0 ],
 					"style" : "",
 					"text" : "print"
 				}
@@ -117,9 +117,9 @@
 					"numinlets" : 1,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 231.0, 346.0, 64.0, 20.0 ],
+					"patching_rect" : [ 221.0, 348.0, 209.696976, 20.0 ],
 					"style" : "",
-					"text" : "foobarbaz",
+					"text" : "The Dance of the Anemones.wav",
 					"textcolor" : [ 0.862745, 0.741176, 0.137255, 1.0 ]
 				}
 

@@ -16,7 +16,7 @@
 
 #define MAX_NUM_ITEMS 256
 
-static long id = 0;
+
 /**********************************************************************/
 // Data Structures
 typedef struct _pmenu {
@@ -27,9 +27,10 @@ typedef struct _pmenu {
     t_jrgba             j_highlightedtextcolor;
     t_jrgba             j_highlightedbgcolor;
     t_jpopupmenu*       j_menu;
+    t_hashtab*          hash_tab;
     t_symbol*           keys[MAX_NUM_ITEMS];
     long                numkeys;
-    t_symbol*           name;
+    int                 id;
 } t_pmenu;
 
 
@@ -37,8 +38,7 @@ typedef struct _trans {
     t_pmenu *object;
     t_dictionary*   dict;
     t_jpopupmenu*   menu;
-    char*           name;
-    
+
 } t_trans;
 
 /**********************************************************************/
@@ -50,15 +50,14 @@ void pmenu_paint(t_pmenu *x, t_object *view);
 void pmenu_mousedown(t_pmenu *x,t_object *patcherview, t_pt pt, long modifiers);
 void pmenu_assist(t_pmenu *x, void *b, long m, long a, char *s);
 void pmenu_dictionary(t_pmenu *x, t_symbol *s);
-void pmenu_dictionary_traverse(t_dictionary_entry *entry, void *x);
+
 void pmenu_attomarray_traverse(t_atom *a, void *x);
+void pmenu_dictionary_parse(t_pmenu *x, t_dictionary *dict, t_jpopupmenu *menu);
 /**********************************************************************/
 // Globals and Statics
 
 static t_class *s_pmenu_class = NULL;
 
-static t_symbol	*ps_dictionary;
-static t_symbol *ps_modified;
 
 /**********************************************************************/
 // Class Definition and Life Cycle
@@ -107,7 +106,7 @@ void ext_main(void *r)
 
     
     
-	CLASS_ATTR_DEFAULT(c, "rect", 0, "0. 0. 100. 20.");
+	CLASS_ATTR_DEFAULT(c, "rect", 0, "0. 0. 100. 12.");
 
 	class_register(CLASS_BOX, c);
 	s_pmenu_class = c;
@@ -135,7 +134,7 @@ t_pmenu *pmenu_new(t_symbol *name, short argc, t_atom *argv)
                 | JBOX_DRAWBACKGROUND
 				//| JBOX_TRANSPARENT
 				//		| JBOX_NOGROW
-				//		| JBOX_GROWY
+						| JBOX_GROWY
 				//		| JBOX_GROWBOTH
 				//		| JBOX_IGNORELOCKCLICK
 				//		| JBOX_HILITE
@@ -161,20 +160,18 @@ t_pmenu *pmenu_new(t_symbol *name, short argc, t_atom *argv)
             textfield_set_editonclick(textfield, 0);			// set it to 0 if you don't want user to edit it in lock mode
             textfield_get_textcolor(textfield, &x->j_textcolor );
             textfield_set_bgcolor(textfield,&x->j_bgcolor);
-            cpost("%f %f %f %f", x->j_bgcolor.red, x->j_bgcolor.green, x->j_bgcolor.blue, x->j_bgcolor.alpha);
+           // cpost("%f %f %f %f", x->j_bgcolor.red, x->j_bgcolor.green, x->j_bgcolor.blue, x->j_bgcolor.alpha);
         }
         
-        char *buff = "foobarbaz";
+        char *buff = " ";
         object_method(jbox_get_textfield((t_object *)x), gensym("settext"), buff);
-        
+
+        textfield_set_useellipsis(jbox_get_textfield((t_object *)x),JGRAPHICS_TEXTLAYOUT_USEELLIPSIS);
+        textfield_set_wordwrap(jbox_get_textfield((t_object *)x),JGRAPHICS_TEXTLAYOUT_NOWRAP );
             
         attr_dictionary_process(x, d);
 
-        
-		// access custom data saved in the patcher by our jsave method
-//		dictionary_getsym(d, gensym("my_string"), &s);
-//		if (s)
-//			object_post((t_object *)x,"custom data saved with patcher: %s", s->s_name);
+        x->hash_tab = (t_hashtab *)hashtab_new(0);
 
 		jbox_ready((t_jbox *)x);
 	}
@@ -187,47 +184,29 @@ void pmenu_free(t_pmenu *x)
         jpopupmenu_destroy(x->j_menu);
     }
 	jbox_free((t_jbox *)x);
-}
-
-enum entry_type {ARRAY, DICTIONARY, STRING, ATOM};
-
-enum entry_type pmenu_dictionary_entry_type(const t_dictionary *d,  t_symbol *key) {
     
-    if(dictionary_entryisatomarray(d, key)) {
-        return ARRAY;
-    } else if(dictionary_entryisdictionary(d, key)) {
-        return DICTIONARY;
-    } else if(dictionary_entryisstring(d, key)) {
-        return STRING;
-    } else {
-        return ATOM;
-    }
 }
 
 void pmenu_attomarray_traverse(t_atom *a, void *obj)
 {
     
     t_pmenu *x = ((t_trans*)obj)->object;
-    t_dictionary *d = ((t_trans*)obj)->dict;
+    //t_dictionary *d = ((t_trans*)obj)->dict;
     t_jpopupmenu *m = ((t_trans*)obj)->menu;
 
-
     if(atomisdictionary(a)) {
-        cpost("atom is dict");
         t_trans o;
         o.object = x;
-        o.dict =(t_dictionary*)atom_getobj(a);
-        o.menu = jpopupmenu_create();
-        dictionary_funall((t_dictionary*)atom_getobj(a), (method)pmenu_dictionary_traverse, (void*)&o);
+        t_dictionary *dict = (t_dictionary*)atom_getobj(a);
+        o.menu = m;
+        pmenu_dictionary_parse(x, dict, m);
     } else if(atomisatomarray(a)) {
-        //Want to ignore nested arrays
-        cpost("atom is array");
+        ;//do nothing
         
     } else if(atomisstring(a)) {
-       // post("atom is string");
-       // string_getptr((t_string *)atom_getobj(a));
-        cpost("string %s", string_getptr((t_string *)atom_getobj(a)));
-        jpopupmenu_additem(m, id++, string_getptr((t_string *)atom_getobj(a)), NULL, 0, 0, NULL);
+       // cpost("string %s", string_getptr((t_string *)atom_getobj(a)));
+        hashtab_store(x->hash_tab, (t_symbol*)x->id, atom_getobj(a));
+        jpopupmenu_additem(m, x->id++, string_getptr((t_string *)atom_getobj(a)), NULL, 0, 0, NULL);
 
     } else {
         switch (atom_gettype(a)) {
@@ -249,128 +228,70 @@ void pmenu_attomarray_traverse(t_atom *a, void *obj)
     }
 }
 
-void pmenu_dictionary_traverse(t_dictionary_entry *entry, void *obj)
-{
-    
-    t_pmenu *x = ((t_trans*)obj)->object;
-    t_dictionary *d = ((t_trans*)obj)->dict;
-    t_symbol *key = 0;
-    t_jpopupmenu *m = ((t_trans*)obj)->menu;
-    key = dictionary_entry_getkey(entry);
-    enum entry_type type = pmenu_dictionary_entry_type(d, key);
-    
-    if(!strcmp(key->s_name, "name")) {
-        t_trans o;
-        o.object = x;
-        
-        t_object *ap;
-        switch (type) {
-            case ARRAY:
-                o.dict = d;
-                o.menu = jpopupmenu_create();
-                cpost("%s is an array", key->s_name);
-                dictionary_getatomarray((t_dictionary*)d, key, &ap);
-                atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
-                jpopupmenu_addsubmenu(m, key->s_name, o.menu, 0);
-                break;
-                
-            case DICTIONARY:
-                cpost("%s is a dict", key->s_name);
-                dictionary_getdictionary((t_dictionary*)d, key, &ap);
-                o.dict = (t_dictionary*)ap;
-                o.menu = jpopupmenu_create();
-                dictionary_funall((t_dictionary*)ap, (method)pmenu_dictionary_traverse, (void*)&o);
-                jpopupmenu_addsubmenu(m, key->s_name, o.menu, 0);
-                break;
-                
-            case STRING:
-                cpost("%s is a string", key->s_name);
-                break;
-            case ATOM:
-                cpost("%s is an atom", key->s_name);
-                break;
-            default:
-                cpost("%s is unrecognized", key->s_name);
-                break;
-        }
 
-    }
-    
-    
-    if(!strcmp(key->s_name, "contents")) {
-        t_trans o;
-        o.object = x;
-        
-        t_object *ap;
-        
-        switch (type) {
-            case ARRAY:
-                o.dict = d;
-                o.menu = jpopupmenu_create();
-                cpost("%s is an array", key->s_name);
-                dictionary_getatomarray((t_dictionary*)d, key, &ap);
-                atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
-                jpopupmenu_addsubmenu(m, key->s_name, o.menu, 0);
-                break;
-                
-            case DICTIONARY:
-                cpost("%s is a dict", key->s_name);
-                dictionary_getdictionary((t_dictionary*)d, key, &ap);
-                o.dict = (t_dictionary*)ap;
-                o.menu = jpopupmenu_create();
-                dictionary_funall((t_dictionary*)ap, (method)pmenu_dictionary_traverse, (void*)&o);
-                jpopupmenu_addsubmenu(m, key->s_name, o.menu, 0);
-                break;
-                
-            case STRING:
-               cpost("%s is a string", key->s_name);
-                break;
-            case ATOM:
-                cpost("%s is an atom", key->s_name);
-                break;
-            default:
-                cpost("%s is unrecognized", key->s_name);
-                break;
+
+void pmenu_dictionary_parse(t_pmenu *x, t_dictionary *dict, t_jpopupmenu *menu)
+{
+   
+    if(dictionary_hasentry(dict, gensym("name")) && dictionary_hasentry(dict, gensym("contents"))){
+
+        if(dictionary_entryisatomarray(dict, gensym("contents"))) {
+            
+            t_trans o;
+            o.object = x;
+            o.menu = jpopupmenu_create();
+            const char *p;
+            dictionary_getstring(dict, gensym("name"), &p);
+
+            t_object *ap;
+            dictionary_getatomarray((t_dictionary*)dict, gensym("contents"), &ap);
+            atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
+                        jpopupmenu_setcolors(o.menu, x->j_textcolor,x->j_bgcolor,x->j_highlightedtextcolor,x->j_highlightedbgcolor);
+            t_jfont *font = jfont_create(jbox_get_fontname((t_object *)x)->s_name, jbox_get_font_slant((t_object *)x), jbox_get_font_weight((t_object *)x), jbox_get_fontsize((t_object *)x));
+            
+            jpopupmenu_setfont(o.menu, font );
+            jfont_destroy(font);
+            jpopupmenu_addsubmenu(menu, p, o.menu, 0);
+
+
         }
     }
-    
 }
+
 
 void pmenu_dictionary(t_pmenu *x, t_symbol *s)
 {
+    t_dictionary *dict = dictobj_findregistered_clone(s);
     
-    
-    t_dictionary *d = dictobj_findregistered_clone(s);
-    
-    t_trans obj;
-    obj.object = x;
-    obj.dict = d;
-    obj.menu = x->j_menu;
+    //top level of dict needs to have name and content keys
+    //if there is a content key it must store and array
+    if(dictionary_hasentry(dict, gensym("name")) && dictionary_hasentry(dict, gensym("contents"))) {
 
-    jpopupmenu_clear(x->j_menu);
-    dictionary_funall(d, (method)pmenu_dictionary_traverse, (void*)&obj);
-   
-    
-//    t_rect rect;
-//    printf("mouse down");
-//    jbox_get_rect_for_view((t_object *)x, patcherview, &rect);
-//    cpost("mouse down %f %f %f %f", x->j_bgcolor.red, x->j_bgcolor.green, x->j_bgcolor.blue, x->j_bgcolor.alpha);
-//    
-//    jpopupmenu_setcolors(x->j_menu, x->j_textcolor,x->j_bgcolor,x->j_highlightedtextcolor,x->j_highlightedbgcolor);
-//    
-//    t_jpopupmenu* sub = jpopupmenu_create();
-//    jpopupmenu_additem(sub, 1, "xfoo", NULL, 0, 0, NULL);
-//    jpopupmenu_additem(sub, 2, "xbar", NULL, 0, 0, NULL);
-//    jpopupmenu_additem(sub, 3, "xbaz", NULL, 0, 0, NULL);
-//    
-//    
-//    jpopupmenu_clear(x->j_menu);
-//    jpopupmenu_additem(x->j_menu, 1, "foo", NULL, 0, 0, NULL);
-//    jpopupmenu_additem(x->j_menu, 2, "bar", NULL, 0, 0, NULL);
-//    jpopupmenu_addsubmenu(x->j_menu, "sub", sub, 0);
-//    jpopupmenu_additem(x->j_menu, 3, "baz", NULL, 0, 0, NULL);
-//    post("%i",jpopupmenu_popup_belowrect	(x->j_menu, rect, 1));
-//    jpopupmenu_destroy(sub);
+        if(dictionary_entryisatomarray(dict, gensym("contents"))) {
+            jpopupmenu_clear(x->j_menu);
+            hashtab_clear(x->hash_tab);
+            x->id = 1;
+            t_trans o;
+            o.object = x;
+            o.dict = dict;
+            o.menu = x->j_menu;
+            const char *p;
+            dictionary_getstring(dict, gensym("name"), &p);
+
+            t_object *ap;
+            dictionary_getatomarray((t_dictionary*)dict, gensym("contents"), &ap);
+
+            atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
+            
+            
+            object_method(jbox_get_textfield((t_object *)x), gensym("settext"), p);
+
+            jbox_redraw((t_jbox *)x);
+        }
+        
+    } else {
+        ;//do nothing
+    }
 }
 
 
@@ -379,11 +300,22 @@ void pmenu_mousedown(t_pmenu *x,t_object *patcherview, t_pt pt, long modifiers)
     t_rect rect;
     
     jbox_get_rect_for_view((t_object *)x, patcherview, &rect);
-    jpopupmenu_setcolors(x->j_menu, x->j_textcolor,x->j_bgcolor,x->j_highlightedtextcolor,x->j_highlightedbgcolor);
     
-    post("%i",jpopupmenu_popup_belowrect	(x->j_menu, rect, 1));
+    jpopupmenu_setcolors(x->j_menu, x->j_textcolor,x->j_bgcolor,x->j_highlightedtextcolor,x->j_highlightedbgcolor);
 
-   
+    
+    t_jfont *font = jfont_create(jbox_get_fontname((t_object *)x)->s_name, jbox_get_font_slant((t_object *)x), jbox_get_font_weight((t_object *)x), jbox_get_fontsize((t_object *)x));
+    
+    jpopupmenu_setfont(x->j_menu, font );
+    jfont_destroy(font);
+    int item = jpopupmenu_popup_belowrect(x->j_menu, rect, 1);
+    if(item > 0) {
+        t_object *o;
+        hashtab_lookup(x->hash_tab, (t_symbol*)item, &o);
+        object_method(jbox_get_textfield((t_object *)x), gensym("settext"), string_getptr((t_string *)o));
+        outlet_anything(x->pmenu_outlet, gensym(string_getptr((t_string *)o)), 0, NULL);
+        jbox_redraw((t_jbox *)x);
+    }
 }
 
 void pmenu_paint(t_pmenu *x, t_object *view)
@@ -411,3 +343,28 @@ void pmenu_assist(t_pmenu *x, void *b, long m, long a, char *s)
         }
     }
 }
+    
+    
+    
+    
+    
+    //    t_rect rect;
+    //    printf("mouse down");
+    //    jbox_get_rect_for_view((t_object *)x, patcherview, &rect);
+    //    cpost("mouse down %f %f %f %f", x->j_bgcolor.red, x->j_bgcolor.green, x->j_bgcolor.blue, x->j_bgcolor.alpha);
+    //
+    //    jpopupmenu_setcolors(x->j_menu, x->j_textcolor,x->j_bgcolor,x->j_highlightedtextcolor,x->j_highlightedbgcolor);
+    //
+    //    t_jpopupmenu* sub = jpopupmenu_create();
+    //    jpopupmenu_additem(sub, 1, "xfoo", NULL, 0, 0, NULL);
+    //    jpopupmenu_additem(sub, 2, "xbar", NULL, 0, 0, NULL);
+    //    jpopupmenu_additem(sub, 3, "xbaz", NULL, 0, 0, NULL);
+    //
+    //
+    //    jpopupmenu_clear(x->j_menu);
+    //    jpopupmenu_additem(x->j_menu, 1, "foo", NULL, 0, 0, NULL);
+    //    jpopupmenu_additem(x->j_menu, 2, "bar", NULL, 0, 0, NULL);
+    //    jpopupmenu_addsubmenu(x->j_menu, "sub", sub, 0);
+    //    jpopupmenu_additem(x->j_menu, 3, "baz", NULL, 0, 0, NULL);
+    //    post("%i",jpopupmenu_popup_belowrect	(x->j_menu, rect, 1));
+    //    jpopupmenu_destroy(sub);
