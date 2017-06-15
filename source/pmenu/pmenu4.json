@@ -1,13 +1,23 @@
 {
 	"name" : "audiofilelibs",
-	"contents" : [ "drumLoop.aiff", "jongly.aif", 		{
+	"contents" : 
+	[ 
+		"drumLoop.aiff", 
+		"jongly.aif", 		
+	
+		{
 			"name" : "Fantasy and Fiction",
 			"contents" : [ "Above The Cathedral.wav", "Alchemist.wav", "An Army Approacheth.wav" ]
-		}
-, 		{
+		},
+		{
 			"name" : "Electrotherapy",
 			"contents" : [ "Alternating Current.wav", "Announcement Electric Healing.wav", "Biofeedback.wav" ]
-		} ]
-
-, "foo" : {"name" : "sacre.aiff", "data" : 23}
+		} ,
+		"foo" ,
+		{
+			"name" : "sacre.aiff", 
+			"data" : [23, 24, 23]
+		}
+			
+	]
 }
