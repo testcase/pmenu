@@ -64,7 +64,7 @@ typedef struct _pmenu {
 
 typedef struct _menu_info {
     t_pmenu *object;
-    t_dictionary*   dict;
+    t_symbol*   dict_name;
     t_jpopupmenu*   menu;
 
 } t_menu_info;
@@ -80,12 +80,12 @@ void pmenu_assist(t_pmenu *x, void *b, long m, long a, char *s);
 void pmenu_dictionary(t_pmenu *x, t_symbol *s);
 
 void pmenu_attomarray_traverse(t_atom *a, void *x);
-void pmenu_dictionary_parse(t_pmenu *x, t_dictionary *dict, t_jpopupmenu *menu);
+void pmenu_dictionary_parse(t_pmenu *x, t_symbol *s, t_jpopupmenu *menu);
 t_max_err pmenu_notify(t_pmenu *x, t_symbol *s, t_symbol *msg, void *sender, void *data);
 void pmenu_jsave(t_pmenu *x, t_dictionary *d);
 void pmenu_int(t_pmenu *x, long n);
 void pmenu_clear(t_pmenu *x);
-void pmenu_open_dictionary(t_pmenu *x, t_dictionary *d);
+void pmenu_open_dictionary(t_pmenu *x, t_symbol *s);
 t_max_err pmenu_setvalueof(t_pmenu *x, long ac, t_atom *av);
 t_max_err pmenu_getvalueof(t_pmenu *x, long *ac, t_atom **av);
 void pmenu_preset(t_pmenu *x);
@@ -123,7 +123,7 @@ void ext_main(void *r)
 	c = class_new("pmenu",(method)pmenu_new,(method)pmenu_free,sizeof(t_pmenu),(method)NULL,A_GIMME,0L);
 
 	c->c_flags |= CLASS_FLAG_NEWDICTIONARY;
-	jbox_initclass(c, JBOX_TEXTFIELD | JBOX_FONTATTR | JBOX_FIXWIDTH);
+	jbox_initclass(c, JBOX_TEXTFIELD | JBOX_FONTATTR );
 
 	class_addmethod(c, (method)pmenu_paint,             "paint",		A_CANT, 0);
     class_addmethod(c, (method)pmenu_mousedown,         "mousedown",	A_CANT, 0);
@@ -159,8 +159,7 @@ void ext_main(void *r)
     CLASS_ATTR_CATEGORY(c, "textcolor", 0, "Color");
     
 
-    
-	CLASS_ATTR_DEFAULT(c, "rect", 0, "0. 0. 120. 22.");
+    CLASS_ATTR_DEFAULT(c,"patching_rect",0, "0. 0. 80. 20.");
 
 	class_register(CLASS_BOX, c);
 	s_pmenu_class = c;
@@ -220,8 +219,13 @@ t_pmenu *pmenu_new(t_symbol *name, short argc, t_atom *argv)
         dictionary_getdictionary(d, ps_pmenu_dict, &s);
 
         if (s) {
-            dictionary_clone_to_existing((t_dictionary*)s, x->dict);
-            pmenu_open_dictionary(x, x->dict);
+            dictionary_clone_to_existing((t_dictionary*)s, x->dict);//x->dict shadows  current dictionary
+            
+            t_symbol *dict_name;
+            dict_name = dictobj_namefromptr((t_dictionary*)s);
+            if (!dict_name)
+                dictobj_register(x->dict, &dict_name);
+            pmenu_open_dictionary(x, dict_name);
         }
         
 		jbox_ready((t_jbox *)x);
@@ -254,11 +258,15 @@ void pmenu_attomarray_traverse(t_atom *a, void *obj)
     
     
     if(atomisdictionary (a)) {
-        t_menu_info o;
-        o.object = x;
         t_dictionary *dict = (t_dictionary*)atom_getobj(a);
-        o.menu = m;
-        pmenu_dictionary_parse(x, dict, m);
+        t_symbol *dict_name;
+        dict_name = dictobj_namefromptr((t_dictionary*)dict);
+        if (!dict_name) {
+            dictobj_register(dict, &dict_name);
+        }
+        
+        pmenu_dictionary_parse(x, dict_name, m);
+        
     } else if(atomisstring(a)) {
         hashtab_store(x->item_hashtab, (t_symbol*)(long)x->id, atom_getobj(a));
         jpopupmenu_additem(m, x->id++, string_getptr((t_string *)atom_getobj(a)), NULL, 0, 0, NULL);
@@ -267,39 +275,40 @@ void pmenu_attomarray_traverse(t_atom *a, void *obj)
 
 
 
-void pmenu_dictionary_parse(t_pmenu *x, t_dictionary *dict, t_jpopupmenu *menu)
+void pmenu_dictionary_parse(t_pmenu *x, t_symbol *s, t_jpopupmenu *menu)
 {
-   
+    
+    t_dictionary *dict =  dictobj_findregistered_clone(s);
+
     //check if dictionary has name and content keys
     if(dictionary_hasentry(dict, ps_pmenu_name) && dictionary_hasentry(dict, ps_pmenu_contents)){
        //check if contents is atomarray. if not, ignore.
         if(dictionary_entryisatomarray(dict, ps_pmenu_contents)) {
             t_menu_info o;
             o.object = x;
-            o.dict = x->dict;
             o.menu = jpopupmenu_create();
-            const char *p;
+            o.dict_name = s;//don't need this now
+            
+            
             //get name value
+            const char *p;
             dictionary_getstring(dict, ps_pmenu_name, &p);
 
-            t_object *ap;
             //get the atomarray in contents value
+            t_object *ap;
             dictionary_getatomarray((t_dictionary*)dict, ps_pmenu_contents, &ap);
             
-            cpost("pmenu_dictionary_parse %i", atomarray_getsize((t_atomarray*)ap));
-
             atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
-//            
-//            
-//            jpopupmenu_setcolors(o.menu, x->textcolor,x->bgcolor,x->highlightedtextcolor,x->highlightedbgcolor);
-//            t_jfont *font = jfont_create(jbox_get_fontname((t_object *)x)->s_name,
-//                                        (t_jgraphics_font_slant)jbox_get_font_slant((t_object *)x),
-//                                         (t_jgraphics_font_weight)jbox_get_font_weight((t_object *)x),
-//                                         jbox_get_fontsize((t_object *)x));
-//
-//            jpopupmenu_setfont(o.menu, font );
-//            jfont_destroy(font);
-//            jpopupmenu_addsubmenu(menu, p, o.menu, 0);
+            
+            jpopupmenu_setcolors(o.menu, x->textcolor,x->bgcolor,x->highlightedtextcolor,x->highlightedbgcolor);
+            t_jfont *font = jfont_create(jbox_get_fontname((t_object *)x)->s_name,
+                                        (t_jgraphics_font_slant)jbox_get_font_slant((t_object *)x),
+                                         (t_jgraphics_font_weight)jbox_get_font_weight((t_object *)x),
+                                         jbox_get_fontsize((t_object *)x));
+
+            jpopupmenu_setfont(o.menu, font );
+            jfont_destroy(font);
+            jpopupmenu_addsubmenu(menu, p, o.menu, 0);
         }
         
     //check if dictionary has name and data keys, if not ignore
@@ -320,9 +329,9 @@ void pmenu_dictionary_parse(t_pmenu *x, t_dictionary *dict, t_jpopupmenu *menu)
 
 
 //for loading dictionary saved with patcher.
-void pmenu_open_dictionary(t_pmenu *x, t_dictionary *dict)
+void pmenu_open_dictionary(t_pmenu *x, t_symbol *s)
 {
-
+    t_dictionary *dict =  dictobj_findregistered_clone(s);
     //check that top level of incoming dictionary has name and contents keys
     if(!dictionary_hasentry(dict, ps_pmenu_name) || !dictionary_hasentry(dict, ps_pmenu_contents)) {
         object_error((t_object*)x, "dictionary does not contain both name and contents keys");
@@ -332,14 +341,20 @@ void pmenu_open_dictionary(t_pmenu *x, t_dictionary *dict)
         //if there is a contents key it must store and array
         if(dictionary_hasentry(x->dict, ps_pmenu_name) && dictionary_hasentry(x->dict, ps_pmenu_contents)) {
             
-            if(dictionary_entryisatomarray(x->dict, ps_pmenu_contents)) {
+            if(dictionary_entryisatomarray(dict, ps_pmenu_contents)) {
                 jpopupmenu_clear(x->menu);
                 hashtab_clear(x->item_hashtab);
                 hashtab_clear(x->data_hashtab);
-                x->id = 1; //
+                
+                t_symbol *dict_name;
+                dict_name = dictobj_namefromptr((t_dictionary*)dict);
+                if (!dict_name)
+                    dictobj_register(dict, &dict_name);
+                x->id = 1;
+
                 t_menu_info o;
                 o.object = x;
-                o.dict = x->dict;
+                o.dict_name = dict_name;
                 o.menu = x->menu;
                 const char *p;
                 dictionary_getstring(x->dict, ps_pmenu_name, &p);
@@ -347,12 +362,10 @@ void pmenu_open_dictionary(t_pmenu *x, t_dictionary *dict)
                 t_object *ap;
                 dictionary_getatomarray((t_dictionary*)x->dict, ps_pmenu_contents, &ap);
                 
-               // cpost("pmenu_open_dictionary %i", atomarray_getsize(ap));
-                
                 atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
                 
                 object_method(jbox_get_textfield((t_object *)x), _sym_settext, p);
-                
+
                 jbox_redraw((t_jbox *)x);
             }
             
@@ -391,14 +404,13 @@ void pmenu_dictionary(t_pmenu *x, t_symbol *s)
                 x->id = 1; //
                 t_menu_info o;
                 o.object = x;
-                o.dict = x->dict;
+                //o.dict = x->dict;
                 o.menu = x->menu;
                 const char *p;
                 dictionary_getstring(x->dict, ps_pmenu_name, &p);
 
                 t_object *ap;
                 dictionary_getatomarray((t_dictionary*)x->dict, ps_pmenu_contents, &ap);
-                //cpost("pmenu_dictionary %i", atomarray_getsize(ap));
 
                 atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
                 
