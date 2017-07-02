@@ -1,0 +1,41 @@
+{
+	"name" : "Dicts",
+	"contents" : 
+	[
+		{ 
+			"name" : "stuff", 
+			"data" : 
+			{
+				"where" : "the garage",
+				"what" : "oldbooks",
+				"smell" : "moldy"
+			}
+		},
+		
+		{ 
+			"name" : "pool",
+			"data" :
+			{
+				"where" : "pool",
+				"what" : "wet",
+				"smell" : "chlorine"
+			
+			}
+			
+		},
+		{ 
+			"name" : "up",
+			"data" :
+			{
+				"where" : "down",
+				"what" : "huh?",
+				"smell" : "donuts"
+			
+			}
+			
+		}
+	]
+}
+		
+
+		

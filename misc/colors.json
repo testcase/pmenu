@@ -1,0 +1,37 @@
+{
+	"name" : "settings",
+	"contents" : 
+	[ 		
+		{
+			"name" : "black and red",
+			"data" : 			
+			{
+				"bgfillcolor" : [ 0.0, 0.0, 0.0, 1.0 ],
+				"bordercolor" : [ 1.0, 0.0, 0.0, 1.0 ],
+				"border" : 10
+			}
+
+		},
+		
+		{
+		
+			"name" : "green and blue",
+			"data" : 			
+			{
+				"bgfillcolor" : [ 0.0, 1.0, 0.0, 1.0 ],
+				"bordercolor" : [ 0.0, 0.0, 1.0, 1.0 ],
+				"border" : 10
+			}
+		},
+		{			
+			"name" : "red and white",
+			"data" : 			
+			{
+				"bgfillcolor" : [ 1.0, 0.0, 0.0, 1.0 ],
+				"bordercolor" : [ 1.0, 1.0, 1.0, 1.0 ],
+				"border" : 10
+			}
+
+		}
+	 ]
+}

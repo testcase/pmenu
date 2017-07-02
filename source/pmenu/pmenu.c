@@ -15,17 +15,6 @@
 #include "ext_boxstyle.h"
 #include "common/commonsyms.c"
 
-/*
- 
- typedef enum {
-	MAX_ERR_NONE =			0,	///< No error
-	MAX_ERR_GENERIC =		-1,	///< Generic error
-	MAX_ERR_INVALID_PTR =	-2,	///< Invalid Pointer
-	MAX_ERR_DUPLICATE =		-3,	///< Duplicate
-	MAX_ERR_OUT_OF_MEM =	-4	///< Out of memory
- } e_max_errorcodes;
-
- */
 
 static t_symbol *ps_pmenu_dict;
 static t_symbol *ps_pmenu_name;
@@ -57,6 +46,8 @@ typedef struct _pmenu {
 
     int                 id;
     long                current_item;
+    
+    t_symbol*           prefix;
 
     
 } t_pmenu;
@@ -90,7 +81,7 @@ t_max_err pmenu_setvalueof(t_pmenu *x, long ac, t_atom *av);
 t_max_err pmenu_getvalueof(t_pmenu *x, long *ac, t_atom **av);
 void pmenu_preset(t_pmenu *x);
 void pmenu_assign(t_pmenu *x, long item, long notify);
-
+t_max_err pmenu_setattr_prefix(t_pmenu *x, void *attr, long ac, t_atom *av);
 
 void pmenu_symbols_init();
 
@@ -137,33 +128,45 @@ void ext_main(void *r)
     class_addmethod(c, (method)pmenu_setvalueof,        "setvalueof", A_CANT, 0);
     class_addmethod(c, (method)pmenu_preset,            "preset", 0);
 
-
+    //background color of selected menu item
     CLASS_ATTR_STYLE_RGBA_PREVIEW(c, "highlightedbgcolor", 0, t_pmenu, highlightedbgcolor, "Highlighted Background Color", "rect_fill");
     CLASS_ATTR_BASIC(c, "highlightedbgcolor", 0);
     CLASS_ATTR_CATEGORY(c,		"highlightedbgcolor", 0, "Color");
     CLASS_ATTR_DEFAULTNAME_SAVE_PAINT(c, "highlightedbgcolor", 0, ".3764705882 0.3843137255 .4 1.");
 
+    //text color of selected menu item
     CLASS_ATTR_STYLE_RGBA_PREVIEW(c, "highlightedtext", 0, t_pmenu, highlightedtextcolor, "Highlighted Text Color", "rect_fill");
     CLASS_ATTR_BASIC(c, "highlightedtext", 0);
     CLASS_ATTR_CATEGORY(c,		"highlightedtext", 0, "Color");
     CLASS_ATTR_DEFAULTNAME_SAVE_PAINT(c, "highlightedtext", 0, "1. 1. 1. 1.");
     
+    //background color of menu
     CLASS_ATTR_STYLE_RGBA_PREVIEW(c,"bgfillcolor",0,t_pmenu, bgcolor,"Background Color","rect_fill");
     CLASS_ATTR_BASIC(c, "bgfillcolor", 0);
     CLASS_ATTR_CATEGORY(c,		"bgfillcolor", 0, "Color");
     CLASS_ATTR_DEFAULTNAME_SAVE_PAINT(c, "bgfillcolor", 0, ".4 .4 .4 1.");
     
+    //text color of menu
     CLASS_ATTR_RGBA(c, "textcolor", 0, t_pmenu, textcolor);
     CLASS_ATTR_DEFAULT_SAVE_PAINT(c, "textcolor", 0, "1. 1. 1. 1.");
     CLASS_ATTR_STYLE_LABEL(c, "textcolor", 0, "rgba", "Text Color");
     CLASS_ATTR_CATEGORY(c, "textcolor", 0, "Color");
     
-
+    //default size
     CLASS_ATTR_DEFAULT(c,"patching_rect",0, "0. 0. 80. 20.");
+    
+    //prefix to be prepended to menu item
+    CLASS_ATTR_SYM(c, "prefix", 0, t_pmenu, prefix);
+    CLASS_ATTR_ACCESSORS(c, "prefix", (method)NULL, (method)pmenu_setattr_prefix);
+    CLASS_ATTR_BASIC(c, "prefix", 0);
+    CLASS_ATTR_CATEGORY(c, "prefix", 0, "Value");
+    CLASS_ATTR_LABEL(c, "prefix", 0, "Prefix");
+    CLASS_ATTR_SAVE(c, "prefix", 0);
 
 	class_register(CLASS_BOX, c);
 	s_pmenu_class = c;
 }
+
 
 
 t_pmenu *pmenu_new(t_symbol *name, short argc, t_atom *argv)
@@ -190,8 +193,11 @@ t_pmenu *pmenu_new(t_symbol *name, short argc, t_atom *argv)
         
         x->menu = jpopupmenu_create();
         textfield = jbox_get_textfield((t_object *) x);
+        x->prefix = _sym_nothing;
         
         x->current_item = 1;
+        
+        
         if (textfield) {
             textfield_set_editonclick(textfield, 0);
             textfield_get_textcolor(textfield, &x->textcolor );
@@ -202,7 +208,7 @@ t_pmenu *pmenu_new(t_symbol *name, short argc, t_atom *argv)
             textfield_set_useellipsis(jbox_get_textfield((t_object *)x),JGRAPHICS_TEXTLAYOUT_USEELLIPSIS);
             textfield_set_wordwrap(jbox_get_textfield((t_object *)x),JGRAPHICS_TEXTLAYOUT_NOWRAP );
             
-        }
+        } //what should happen if there is no textfield?
 
         jbox_processlegacydefaults((t_jbox *)x, d, 0);
 
@@ -234,6 +240,20 @@ t_pmenu *pmenu_new(t_symbol *name, short argc, t_atom *argv)
 	return x;
 }
 
+
+//set the prefix attribute.
+t_max_err pmenu_setattr_prefix(t_pmenu *x, void *attr, long ac, t_atom *av)
+{
+    if (ac && av) {
+        x->prefix = atom_getsym(av);
+    } else {
+        
+        x->prefix = NULL;
+    }
+    return MAX_ERR_NONE;
+}
+
+
 void pmenu_free(t_pmenu *x)
 {
     jpopupmenu_destroy(x->menu);
@@ -250,13 +270,15 @@ void pmenu_clear(t_pmenu *x) {
     jbox_redraw((t_jbox *)x);
 }
 
+
+//walk through an atom array from a dict
 void pmenu_attomarray_traverse(t_atom *a, void *obj)
 {
     
     t_pmenu *x = ((t_menu_info*)obj)->object;
     t_jpopupmenu *m = ((t_menu_info*)obj)->menu;
     
-    
+    //if the atom is a dictionary, parse it
     if(atomisdictionary (a)) {
         t_dictionary *dict = (t_dictionary*)atom_getobj(a);
         t_symbol *dict_name;
@@ -266,11 +288,11 @@ void pmenu_attomarray_traverse(t_atom *a, void *obj)
         }
         
         pmenu_dictionary_parse(x, dict_name, m);
-        
+        //if atom is string, add it to the popup.
     } else if(atomisstring(a)) {
         hashtab_store(x->item_hashtab, (t_symbol*)(long)x->id, atom_getobj(a));
         jpopupmenu_additem(m, x->id++, string_getptr((t_string *)atom_getobj(a)), NULL, 0, 0, NULL);
-    }
+    } //are numbers needed?
 }
 
 
@@ -390,7 +412,7 @@ void pmenu_dictionary(t_pmenu *x, t_symbol *s)
     } else {
         
         dictionary_clear(x->dict);
-        //clone into dict so that orignal clone not owned by object dictionary
+        //clone into x->dict so that orignal clone not owned by object dictionary
         dictionary_clone_to_existing(d, x->dict);
         
         //top level of dict needs to have name and content keys
@@ -549,7 +571,15 @@ void pmenu_assign(t_pmenu *x, long item, long notify)
                 }
                 
                 outlet_int(x->id_outlet, item);
-                outlet_anything(x->item_outlet, gensym(string_getptr((t_string *)o)), 0, NULL);
+                t_atom av[1];
+                atom_setsym(av, gensym(string_getptr((t_string *)o)));
+                if(!x->prefix || (x->prefix == _sym_nothing)) {
+                    outlet_anything(x->item_outlet, atom_getsym(av), 0, NULL );
+                } else {
+                    outlet_anything(x->item_outlet, x->prefix, 1, av );
+                    
+                }
+
                 x->current_item = item;
                 if (notify) {
                     object_notify(x, _sym_modified, NULL);

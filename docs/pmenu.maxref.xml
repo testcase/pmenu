@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?> 
+ <?xml-stylesheet href="./_c74_ref.xsl" type="text/xsl"?>
+
+<c74object name="pmenu" module="max" category="U/I">
+<digest>
+Pop-up menu with hierarchical listings
+</digest>
+<description>
+Displays a pop-up menu. Selections will be output the first outlet and optional data can be attached to each entry.
+</description>
+<metadatalist>
+	<metadata  name="author">
+Todd Ingalls
+</metadata>
+<metadata  name="tag">
+U/I
+</metadata>
+<metadata  name="tag">
+U/I
+</metadata>
+</metadatalist>
+		<inletlist>
+	<inlet id="0" type="INLET_TYPE">
+<digest>
+Messages in
+</digest>
+<description>
+Messages to pmenu
+</description>
+
+</inlet>
+</inletlist>
+		<outletlist>
+	<outlet id="0" type="OUTLET_TYPE">
+<digest>
+Menu item as message
+</digest>
+<description>
+Menu item evaluated as message and prepended with optional prefix
+</description>
+
+</outlet>
+<outlet id="1" type="OUTLET_TYPE">
+<digest>
+Selected Item ID
+</digest>
+<description>
+Item ID of selected item
+</description>
+
+</outlet>
+<outlet id="2" type="OUTLET_TYPE">
+<digest>
+Data associated with selected item.
+</digest>
+<description>
+Arbitrary data associated with menu item
+</description>
+
+</outlet>
+</outletlist>
+		<methodlist>
+	<method name="dictionary"><arglist>
+</arglist>
+<digest>
+Name of dictionary to use to build menu
+</digest>
+<description>
+Name of dictionary to use to build menu
+</description>
+</method ></methodlist>
+		<attributelist>
+	<attribute name="prefix" get="1" set="1" type="symbol" size="1">
+<digest>
+Output prefix
+</digest>
+<description>
+Sets a menu-wide prefix that will be prepended to all menu items when output
+</description>
+</attribute>
+</attributelist>
+		<examplelist>
+	<example img="0"/></examplelist>
+		<seealsolist>
+	<seealso name="umenu"/>
+<seealso name="coll"/>
+</seealsolist>
+	<discsussion>
+The <o>pmenu</o> object clones dictionaries it receives and will not update based on changes to the original dict 
+the dictionary needs to have at the top level a name key which is a string and a contents key which points to an array. the array can hold strings, other dictionaries with name and content keys (for submenus). Entries in the menu can also be a dictionary with a name key and data key. The values in the data key are ouput the 3rd outlet when the menu item is selected
+</discsussion>
+</c74object>

@@ -1,0 +1,56 @@
+{
+	"name" : "Scales",
+	"contents" : [ 		{
+			"name" : "major",
+			"data" : [ 0, 2, 4, 5, 7, 9, 11 ]
+		}
+, 		{
+			"name" : "natural minor",
+			"data" : [ 0, 2, 3, 5, 7, 8, 10 ]
+		},
+		{
+			"name" : "harmonic minor",
+			"data" : [ 0, 2, 3, 5, 7, 8, 11 ]
+		}
+, 		{
+			"name" : "So-called Church Modes",
+			"contents" : [ 				{
+					"name" : "Ionian",
+					"data" : [ 0, 2, 4, 5, 7, 9, 11 ]
+				}
+, 				{
+					"name" : "Dorian",
+					"data" : [ 0, 2, 3, 5, 7, 9, 10 ]
+				}
+, 				{
+					"name" : "Phrygian",
+					"data" : [ 0, 1, 3, 5, 7, 8, 10 ]
+				}
+, 				{
+					"name" : "Lydian",
+					"data" : [ 0, 2, 4, 6, 7, 9, 11 ]
+				}
+, 				{
+					"name" : "Mixolydian",
+					"data" : [ 0, 2, 4, 5, 7, 9, 10 ]
+				}
+, 				{
+					"name" : "Aeolian",
+					"data" : [ 0, 2, 3, 5, 7, 8, 10 ]
+				}
+, 				{
+					"name" : "Locrian (Rarely Used)",
+					"data" : [ 0, 1, 3, 5, 6, 8, 10 ]
+				}
+ ]
+		}
+, 		{
+			"name" : "octotonic",
+			"data" : [ 0, 1, 3, 4, 6, 7, 9, 10 ]
+		}
+		,{
+			"name" : "whole tone",
+			"data" : [ 0, 2, 4, 6, 8, 10 ]
+		}
+ ]
+}
