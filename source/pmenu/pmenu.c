@@ -82,6 +82,7 @@ t_max_err pmenu_getvalueof(t_pmenu *x, long *ac, t_atom **av);
 void pmenu_preset(t_pmenu *x);
 void pmenu_assign(t_pmenu *x, long item, long notify);
 t_max_err pmenu_setattr_prefix(t_pmenu *x, void *attr, long ac, t_atom *av);
+void pmenu_rebuild_menu(t_pmenu *x);
 
 void pmenu_symbols_init();
 
@@ -114,7 +115,7 @@ void ext_main(void *r)
 	c = class_new("pmenu",(method)pmenu_new,(method)pmenu_free,sizeof(t_pmenu),(method)NULL,A_GIMME,0L);
 
 	c->c_flags |= CLASS_FLAG_NEWDICTIONARY;
-	jbox_initclass(c, JBOX_TEXTFIELD | JBOX_FONTATTR );
+    jbox_initclass(c, JBOX_TEXTFIELD | JBOX_FONTATTR | JBOX_TEXTJUSTIFICATIONATTR);
 
 	class_addmethod(c, (method)pmenu_paint,             "paint",		A_CANT, 0);
     class_addmethod(c, (method)pmenu_mousedown,         "mousedown",	A_CANT, 0);
@@ -133,24 +134,30 @@ void ext_main(void *r)
     CLASS_ATTR_BASIC(c, "highlightedbgcolor", 0);
     CLASS_ATTR_CATEGORY(c,		"highlightedbgcolor", 0, "Color");
     CLASS_ATTR_DEFAULTNAME_SAVE_PAINT(c, "highlightedbgcolor", 0, ".3764705882 0.3843137255 .4 1.");
+    class_attr_stylemap(c, "highlightedbgcolor", "selectioncolor");
 
     //text color of selected menu item
     CLASS_ATTR_STYLE_RGBA_PREVIEW(c, "highlightedtext", 0, t_pmenu, highlightedtextcolor, "Highlighted Text Color", "rect_fill");
     CLASS_ATTR_BASIC(c, "highlightedtext", 0);
     CLASS_ATTR_CATEGORY(c,		"highlightedtext", 0, "Color");
     CLASS_ATTR_DEFAULTNAME_SAVE_PAINT(c, "highlightedtext", 0, "1. 1. 1. 1.");
+    class_attr_stylemap(c, "highlightedtext", "elementcolor");
+    
+
     
     //background color of menu
     CLASS_ATTR_STYLE_RGBA_PREVIEW(c,"bgfillcolor",0,t_pmenu, bgcolor,"Background Color","rect_fill");
     CLASS_ATTR_BASIC(c, "bgfillcolor", 0);
     CLASS_ATTR_CATEGORY(c,		"bgfillcolor", 0, "Color");
     CLASS_ATTR_DEFAULTNAME_SAVE_PAINT(c, "bgfillcolor", 0, ".4 .4 .4 1.");
+    class_attr_stylemap(c, "bgcolor", "bgcolor");
     
     //text color of menu
     CLASS_ATTR_RGBA(c, "textcolor", 0, t_pmenu, textcolor);
     CLASS_ATTR_DEFAULT_SAVE_PAINT(c, "textcolor", 0, "1. 1. 1. 1.");
     CLASS_ATTR_STYLE_LABEL(c, "textcolor", 0, "rgba", "Text Color");
     CLASS_ATTR_CATEGORY(c, "textcolor", 0, "Color");
+    class_attr_stylemap(c, "textcolor", "textcolor_inverse");
     
     //default size
     CLASS_ATTR_DEFAULT(c,"patching_rect",0, "0. 0. 80. 20.");
@@ -200,7 +207,7 @@ t_pmenu *pmenu_new(t_symbol *name, short argc, t_atom *argv)
         
         if (textfield) {
             textfield_set_editonclick(textfield, 0);
-            textfield_get_textcolor(textfield, &x->textcolor );
+            textfield_set_textcolor(textfield, &x->textcolor );
             textfield_set_bgcolor(textfield,&x->bgcolor);
             char *buff = " ";
             object_method(jbox_get_textfield((t_object *)x), _sym_settext, buff);
@@ -351,6 +358,12 @@ void pmenu_dictionary_parse(t_pmenu *x, t_symbol *s, t_jpopupmenu *menu)
 
 
 //for loading dictionary saved with patcher.
+
+
+//making the actual menu is unecesary in this method because it will be re-made when
+//pmenu is clicked. doing it at this stage just to see if it catches any problems
+// before attempting to display. maybe the parsing of the dict and making the menu
+// should be separated but doen't seem to cause issue.
 void pmenu_open_dictionary(t_pmenu *x, t_symbol *s)
 {
     t_dictionary *dict =  dictobj_findregistered_clone(s);
@@ -386,8 +399,6 @@ void pmenu_open_dictionary(t_pmenu *x, t_symbol *s)
                 
                 atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
                 
-                object_method(jbox_get_textfield((t_object *)x), _sym_settext, p);
-
                 jbox_redraw((t_jbox *)x);
             }
             
@@ -396,6 +407,10 @@ void pmenu_open_dictionary(t_pmenu *x, t_symbol *s)
 }
 
 //for dealing with dictionary sent to inlet.
+
+//making the actual menu is unecesary in this method because it will be re-made when
+//pmenu is clicked. doing it at this stage just to see if it catches any problems
+// before attempting to display. maybe the parsing of th
 
 void pmenu_dictionary(t_pmenu *x, t_symbol *s)
 {
@@ -430,14 +445,12 @@ void pmenu_dictionary(t_pmenu *x, t_symbol *s)
                 o.menu = x->menu;
                 const char *p;
                 dictionary_getstring(x->dict, ps_pmenu_name, &p);
-
+                
                 t_object *ap;
                 dictionary_getatomarray((t_dictionary*)x->dict, ps_pmenu_contents, &ap);
-
+                
                 atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
                 
-                object_method(jbox_get_textfield((t_object *)x), _sym_settext, p);
-
                 jbox_redraw((t_jbox *)x);
             }
         }
@@ -445,11 +458,51 @@ void pmenu_dictionary(t_pmenu *x, t_symbol *s)
 }
 
 
+
+void pmenu_rebuild_menu(t_pmenu *x)
+{
+    
+    if(dictionary_hasentry(x->dict, ps_pmenu_name) && dictionary_hasentry(x->dict, ps_pmenu_contents)) {
+        //is contents key an attomarray
+        if(dictionary_entryisatomarray(x->dict, ps_pmenu_contents)) {
+            jpopupmenu_clear(x->menu);
+            hashtab_clear(x->item_hashtab);
+            hashtab_clear(x->data_hashtab);
+            x->id = 1; //
+            t_menu_info o;
+            o.object = x;
+            //o.dict = x->dict;
+            o.menu = x->menu;
+            const char *p;
+            dictionary_getstring(x->dict, ps_pmenu_name, &p);
+            
+            t_object *ap;
+            dictionary_getatomarray((t_dictionary*)x->dict, ps_pmenu_contents, &ap);
+            
+            atomarray_funall((t_atomarray*)ap,(method)pmenu_attomarray_traverse, (void*)&o);
+            
+            jbox_redraw((t_jbox *)x);
+        }
+    }
+
+}
+
+
+
 void pmenu_mousedown(t_pmenu *x,t_object *patcherview, t_pt pt, long modifiers)
 {
     t_rect rect;
     
     jbox_get_rect_for_view((t_object *)x, patcherview, &rect);
+    
+    
+    if(x->dict) {
+        
+        jpopupmenu_clear(x->menu);
+        pmenu_rebuild_menu(x);
+
+    }
+    
     
     jpopupmenu_setcolors(x->menu, x->textcolor,x->bgcolor,x->highlightedtextcolor,x->highlightedbgcolor);
 
@@ -462,6 +515,8 @@ void pmenu_mousedown(t_pmenu *x,t_object *patcherview, t_pt pt, long modifiers)
     
     jpopupmenu_setfont(x->menu, font );
     jfont_destroy(font);
+
+    
     int item = jpopupmenu_popup_nearbox(x->menu, (t_object *)x, patcherview, (int)x->current_item);
     if(item > 0) {
         pmenu_assign(x, item, true);
@@ -478,6 +533,8 @@ void pmenu_paint(t_pmenu *x, t_object *view)
     jgraphics_rectangle(g, 0., 0., rect.width, rect.height);
     jgraphics_set_source_jrgba(g, &x->bgcolor);
     jgraphics_fill(g);
+
+   
 }
 
 
@@ -598,5 +655,6 @@ void pmenu_preset(t_pmenu *x)
 
 t_max_err pmenu_notify(t_pmenu *x, t_symbol *s, t_symbol *msg, void *sender, void *data) {
 
+    
     return jbox_notify((t_jbox *)x, s, msg, sender, data);
 }
