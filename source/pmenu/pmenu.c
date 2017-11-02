@@ -375,6 +375,9 @@ void pmenu_open_dictionary(t_pmenu *x, t_symbol *s)
         //top level of dict needs to have name and contents keys
         //if there is a contents key it must store and array
         if(dictionary_hasentry(x->dict, ps_pmenu_name) && dictionary_hasentry(x->dict, ps_pmenu_contents)) {
+            const char *title;
+            dictionary_getstring(x->dict, ps_pmenu_name, &title);
+            object_method(jbox_get_textfield((t_object *)x), _sym_settext, title);
             
             if(dictionary_entryisatomarray(dict, ps_pmenu_contents)) {
                 jpopupmenu_clear(x->menu);
@@ -433,6 +436,9 @@ void pmenu_dictionary(t_pmenu *x, t_symbol *s)
         //top level of dict needs to have name and content keys
         //if there is a content key it must store and array
         if(dictionary_hasentry(x->dict, ps_pmenu_name) && dictionary_hasentry(x->dict, ps_pmenu_contents)) {
+            const char *title;
+            dictionary_getstring(x->dict, ps_pmenu_name, &title);
+            object_method(jbox_get_textfield((t_object *)x), _sym_settext, title);
             //is contents key an attomarray
             if(dictionary_entryisatomarray(x->dict, ps_pmenu_contents)) {
                 jpopupmenu_clear(x->menu);

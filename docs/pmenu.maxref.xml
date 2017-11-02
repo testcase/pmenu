@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
+
 <?xml-stylesheet href="./_c74_ref.xsl" type="text/xsl"?>
+
 <c74object name="pmenu" module="max" category="U/I">
 	<digest>
 		Pop-up menu with hierarchical listings 
@@ -74,10 +76,17 @@
 			<description>
 				Sets a menu-wide prefix that will be prepended to all menu items when output 
 			</description>
+			<attributelist>
+				<attribute name="category" get="1" set="1" type="symbol" size="1" value="Value" />
+				<attribute name="default" get="1" set="1" type="int" size="1" value="1" />
+				<attribute name="label" get="1" set="1" type="symbol" size="1" value="Symbol to prepend" />
+				<attribute name="save" get="1" set="1" type="int" size="1" value="1" />
+				<attribute name="style" get="1" set="1" type="symbol" size="1" value="onoff" />
+			</attributelist>
 		</attribute>
 	</attributelist>
 	<examplelist>
-		<example img="0" />
+		<example img="pmenu.png" caption="Used to send commands ...or to display text associated with numbers received" />
 	</examplelist>
 
 	<seealsolist>
@@ -85,21 +94,7 @@
 		<seealso name="coll" /> 
 	</seealsolist>
 	<discsussion>
-		The 
-		<o>
-			pmenu
-		</o>
-		object clones dictionaries it receives and will not update based on changes to the original dict the dictionary needs to have at the top level a name key which is a string and a contents key which points to an array. 
-		the array can hold strings, other dictionaries with name and content keys (for submenus). Entries in the menu can also be a dictionary with a name key and data key. 
-		The values in the data key are ouput the 3rd outlet when the menu item is selected.
-		
-		For instance, a simple menu would look like this in json/dict 
-		
-		{
-			"name" : "foo",
-			"contents" : ["bar", "baz", "foobar", "foobaz"]
-	
-		}
+
 		
 			
 		
