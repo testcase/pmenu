@@ -77,31 +77,21 @@
 		</attribute>
 	</attributelist>
 	<examplelist>
-		<example img="0" />
+		<example img="0" /> 
 	</examplelist>
-
 	<seealsolist>
-		<seealso name="umenu" /> 
-		<seealso name="coll" /> 
+		<seealso name="umenu" /> <seealso name="coll" /> 
 	</seealsolist>
 	<discsussion>
 		The 
 		<o>
-			pmenu
+			pmenu 
 		</o>
-		object clones dictionaries it receives and will not update based on changes to the original dict the dictionary needs to have at the top level a name key which is a string and a contents key which points to an array. 
-		the array can hold strings, other dictionaries with name and content keys (for submenus). Entries in the menu can also be a dictionary with a name key and data key. 
-		The values in the data key are ouput the 3rd outlet when the menu item is selected.
-		
-		For instance, a simple menu would look like this in json/dict 
-		
-		{
-			"name" : "foo",
-			"contents" : ["bar", "baz", "foobar", "foobaz"]
-	
-		}
-		
-			
-		
+		object clones dictionaries it receives and will not update based on changes to the original dict the dictionary needs to have at the top level a name key which is a string and a contents key which points to an array. the array can hold strings, other dictionaries with name and content keys (for submenus). Entries in the menu can also be a dictionary with a name key and data key. The values in the data key are ouput the 3rd outlet when the menu item is selected. 
+	</discsussion>
+	<seealsolist>
+		<seealso name="umenu" /> <seealso name="coll" /> 
+	</seealsolist>
+	<discsussion>
 	</discsussion>
 </c74object>

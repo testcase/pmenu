@@ -101,8 +101,8 @@
 									"fontface" : 0,
 									"fontname" : "Arial",
 									"fontsize" : 12.0,
-									"highlightedbgcolor" : [ 0.901961, 0.901961, 0.901961, 1.0 ],
-									"highlightedtext" : [ 0.25098, 0.0, 0.501961, 1.0 ],
+									"highlightedbgcolor" : [ 0.89112, 0.282613, 0.278131, 1.0 ],
+									"highlightedtext" : [ 0.178052, 0.0, 0.501881, 1.0 ],
 									"id" : "obj-1",
 									"maxclass" : "pmenu",
 									"numinlets" : 1,
@@ -717,7 +717,7 @@
 ,
 									"prefix" : "",
 									"style" : "default",
-									"text" : "jsfiletester-example.maxpat",
+									"text" : "Examples",
 									"textcolor" : [ 0.501961, 1.0, 0.0, 1.0 ],
 									"textjustification" : 0
 								}
