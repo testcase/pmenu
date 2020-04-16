@@ -1,6 +1,7 @@
 # pmenu
 
-
+### License 
+This project is released under the MIT License
 
 ### Description
 Pop-up menu for Max/MSP/Jitter with hierarchical listings.
@@ -19,3 +20,4 @@ Only mac version of object is currently in repo but if anyone wants to compile f
 
 
 todd ingalls - testcase@asu.edu
+
