@@ -1,0 +1,23 @@
+{
+	"author" : "Todd Ingalls",
+	"description" : "Displays a pop-up menu. Selections will be output the first outlet and optional data can be attached to each entry.",
+	"max_version_min" : "8.0", "max_version_max" : "none",
+	"name" : "@C74_PACKAGE_NAME@",
+	"os" : {
+		"macintosh" : {
+			"platform" : [ "x64", "aarch64" ],
+			"min_version" : "none"
+		},
+		"windows" : {
+			"platform" : [ "x64" ],
+			"min_version" : "none"
+		}
+	},
+	"package_extra" : {
+		"reverse_domain" : "org.tenuous",
+		"copyright" : "Copyright (c) 2019 Todd Ingalls"
+	},
+	"tags" : [ ],
+	"version" : "@GIT_VERSION_MAJ@.@GIT_VERSION_MIN@.@GIT_VERSION_SUB@",
+	"website" : "https://github.com/testcase/pmenu"
+}
